@@ -1,4 +1,6 @@
-﻿#include "omp.h"
+﻿#define _CRT_SECURE_NO_WARNINGS
+
+#include "omp.h"
 #include "iostream"
 #include <stdio.h>
 #include <ctime>
@@ -7,205 +9,226 @@
 
 using namespace std;
 
-const int NMAX = 1000000;
-
+int twoThreads(int* a, int* b, int* c, int NMAX);
+int threeThreads(int* a, int* b, int* c, int NMAX);
+int fourThreads(int* a, int* b, int* c, int NMAX);
+int consistently(int* a, int* b, int* c, int NMAX);
 
 int main()
 
 {
-	setlocale(LC_ALL, "Russian");
+	setlocale(LC_ALL, "russian");
 
-	int i;
+	int NMAX;
+
+	printf("Введите: NMAX ");
+
+	scanf("%d", &NMAX);
 
 
-	srand(time(0));
+	double start1, end1;
 
+	double start2, end2;
 
+	double start3, end3;
 
-	//Масиив динамичский, потому что иначе будет Stack Overflow
+	double start4, end4;
 
+	long total = 0;
 
 	int* A = new int[NMAX];
-	for (int i = 0; i < NMAX; i++) {
-		A[i] = 1 + rand() % 10;
-	}
 
 	int* B = new int[NMAX];
-	for (int i = 0; i < NMAX; i++) {
-		B[i] = 1 + rand() % 10;
-	}
 
 	int* C = new int[NMAX];
-	int* C2 = new int[NMAX];
+
+	for (int i = 0; i < NMAX; i++) {
+
+		A[i] = (i - 15) % 1000 + 150;
+
+		B[i] = (i + 7) % 1500 - 26;
+
+	}
 
 
 
+	start1 = omp_get_wtime();
 
-	double start2;
-	double end2;
-	int total = 0;
+	total = twoThreads(A, B, C, NMAX);
+
+	end1 = omp_get_wtime();
+
+
+	printf("Сумма элементов матрицы равна %ld\n", total);
 
 	start2 = omp_get_wtime();
-	/*Начало параллельного фрагмента*/
-#pragma omp parallel private(i, j) reduction(+:total)
+
+	total = threeThreads(A, B, C, NMAX);
+
+	end2 = omp_get_wtime();
+
+
+	printf("Сумма элементов матрицы равна %ld\n", total);
+
+	start3 = omp_get_wtime();
+
+	total = fourThreads(A, B, C, NMAX);
+
+	end3 = omp_get_wtime();
+
+	printf("Сумма элементов матрицы равна %ld\n", total);
+
+	start4 = omp_get_wtime();
+
+	total = consistently(A, B, C, NMAX);
+
+	end4 = omp_get_wtime();
+
+	printf("Сумма элементов матрицы равна %ld\n", total);
+
+	printf("Время для 2-х тредов: %f\n", end1 - start1);
+
+	printf("Время для 3-х тредов: %f\n", end2 - start2);
+
+	printf("Время для 4-х тредов: %f\n", end3 - start3);
+
+	printf("Время для последовательного вычисления: %f\n", end4 - start4);
+
+	delete[] A;
+	delete[] B;
+	delete[] C;
+
+	return 0;
+}
+
+int twoThreads(int* a, int* b, int* c, int NMAX) {
+	int total = 0;
+	int i;
+
+#pragma omp parallel private(i) reduction(+:total)
 #pragma omp sections
 	{
 #pragma omp section
 		for (i = 0; i < NMAX / 2; i++)
 		{
-			if (A[i] > B[i])
-				C[i] = A[i];
+			if (a[i] > b[i])
+				c[i] = a[i];
 			else
-				C[i] = B[i];
-			total += C[i];
+				c[i] = b[i];
+			total += c[i];
 		}
 #pragma omp section
 		for (i = NMAX / 2; i < NMAX; i++)
 		{
-			if (A[i] > B[i])
-				C[i] = A[i];
+			if (a[i] > b[i])
+				c[i] = a[i];
 			else
-				C[i] = B[i];
-			total += C[i];
+				c[i] = b[i];
+			total += c[i];
 		}
 	}
-	/* Завершение параллельного фрагмента */
+	
+	return total;
+}
 
-	end2 = omp_get_wtime();
+int threeThreads(int* a, int* b, int* c, int NMAX) {
+	int total = 0;
+	int i;
 
-	printf("Сумма элементов маccива равна %d\n", total);
-
-	cout << "Время при делении на 2 потока " << end2 - start2 << endl;
-
-
-	double start3;
-	double end3;
-	total = 0;
-
-	start3 = omp_get_wtime();
-	/*Начало параллельного фрагмента*/
-#pragma omp parallel private(i, j) reduction(+:total)
+#pragma omp parallel private(i) reduction(+:total)
 #pragma omp sections
 	{
 #pragma omp section
 		for (i = 0; i < NMAX / 3; i++)
 		{
-			if (A[i] > B[i])
-				C[i] = A[i];
+			if (a[i] > b[i])
+				c[i] = a[i];
 			else
-				C[i] = B[i];
-			total += C[i];
+				c[i] = b[i];
+			total += c[i];
 		}
 #pragma omp section
 		for (i = NMAX / 3; i < 2 * NMAX / 3; i++)
 		{
-			if (A[i] > B[i])
-				C[i] = A[i];
+			if (a[i] > b[i])
+				c[i] = a[i];
 			else
-				C[i] = B[i];
-			total += C[i];
+				c[i] = b[i];
+			total += c[i];
 		}
 #pragma omp section
 		for (i = 2 * NMAX / 3; i < NMAX; i++)
 		{
-			if (A[i] > B[i])
-				C[i] = A[i];
+			if (a[i] > b[i])
+				c[i] = a[i];
 			else
-				C[i] = B[i];
-			total += C[i];
+				c[i] = b[i];
+			total += c[i];
 		}
 	}
-	/* Завершение параллельного фрагмента */
+	return total;
+}
 
-	end3 = omp_get_wtime();
+int fourThreads(int* a, int* b, int* c, int NMAX) {
+	int total = 0;
+	int i;
 
-	printf("Сумма элементов маccива равна %d\n", total);
-
-	cout << "Время при делении на 3 потока " << end3 - start3 << endl;
-
-
-	double start4;
-	double end4;
-	total = 0;
-
-
-	start4 = omp_get_wtime();
-	/*Начало параллельного фрагмента*/
-#pragma omp parallel private(i, j) reduction(+:total)
+#pragma omp parallel private(i) reduction(+:total)
 #pragma omp sections
 	{
 #pragma omp section
 		for (i = 0; i < NMAX / 4; i++)
 		{
-			if (A[i] > B[i])
-				C[i] = A[i];
+			if (a[i] > b[i])
+				c[i] = a[i];
 			else
-				C[i] = B[i];
-			total += C[i];
+				c[i] = b[i];
+			total += c[i];
 		}
 #pragma omp section
 		for (i = NMAX / 4; i < NMAX / 2; i++)
 		{
-			if (A[i] > B[i])
-				C[i] = A[i];
+			if (a[i] > b[i])
+				c[i] = a[i];
 			else
-				C[i] = B[i];
-			total += C[i];
+				c[i] = b[i];
+			total += c[i];
 		}
 #pragma omp section
 		for (i = NMAX / 2; i < 3 * NMAX / 4; i++)
 		{
-			if (A[i] > B[i])
-				C[i] = A[i];
+			if (a[i] > b[i])
+				c[i] = a[i];
 			else
-				C[i] = B[i];
-			total += C[i];
+				c[i] = b[i];
+			total += c[i];
 		}
 #pragma omp section
 		for (i = 3 * NMAX / 4; i < NMAX; i++)
 		{
-			if (A[i] > B[i])
-				C[i] = A[i];
+			if (a[i] > b[i])
+				c[i] = a[i];
 			else
-				C[i] = B[i];
-			total += C[i];
+				c[i] = b[i];
+			total += c[i];
 		}
 	}
-	/* Завершение параллельного фрагмента */
+	return total;
+}
 
-	end4 = omp_get_wtime();
-
-	printf("Сумма элементов маccива равна %d\n", total);
-
-	cout << "Время при делении на 4 потока " << end4 - start4 << endl;
-
-
-	double startPos;
-	double endPos;
-	int sum = 0;
-
-	startPos = omp_get_wtime();
+int consistently(int* a, int* b, int* c, int NMAX) {
+	int total = 0;
+	int i;
 
 	for (i = 0; i < NMAX; i++)
+
 	{
-		if (A[i] > B[i])
-			C2[i] = A[i];
+		if (a[i] > b[i])
+			c[i] = a[i];
 		else
-			C2[i] = B[i];
-		sum += C2[i];
+			c[i] = b[i];
+		total += c[i];
 	}
-
-	endPos = omp_get_wtime();
-
-
-	printf("Сумма элементов маccива равна %d\n", sum);
-
-	cout << "Время без параллельного использования вычислительных ресурсов " << endPos - startPos << endl;
-
-
-
-
-
-
+	return total;
 }
 
