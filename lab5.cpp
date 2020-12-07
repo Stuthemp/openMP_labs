@@ -47,7 +47,7 @@ int main()
 
 	start2 = omp_get_wtime();
 	/*Начало параллельного фрагмента*/
-#pragma omp for private(i, j) reduction(+:total)
+#pragma omp parallel private(i, j) reduction(+:total)
 #pragma omp sections
 	{
 #pragma omp section
@@ -84,7 +84,7 @@ int main()
 
 	start3 = omp_get_wtime();
 	/*Начало параллельного фрагмента*/
-#pragma omp for private(i, j) reduction(+:total)
+#pragma omp parallel private(i, j) reduction(+:total)
 #pragma omp sections
 	{
 #pragma omp section
@@ -131,7 +131,7 @@ int main()
 
 	start4 = omp_get_wtime();
 	/*Начало параллельного фрагмента*/
-#pragma omp for private(i, j) reduction(+:total)
+#pragma omp parallel private(i, j) reduction(+:total)
 #pragma omp sections
 	{
 #pragma omp section
