@@ -1,0 +1,169 @@
+﻿#define _CRT_SECURE_NO_WARNINGS
+
+#include <omp.h>
+
+#include <iostream>
+
+int semaphore(int* a,  int* b, int* c, int NMAX);
+int barrier(int* a,  int* b, int* c, int NMAX);
+int consistently(int* a,  int* b, int* c, int NMAX);
+
+int main()
+
+{
+
+	//srand(time(NULL));
+
+	setlocale(LC_ALL, "russian");
+
+	int NMAX;
+
+	printf("Введите: NMAX ");
+
+	scanf("%d", &NMAX);
+
+
+	double start1, end1;
+
+	double start2, end2;
+
+	double start3, end3;
+
+	long total = 0;
+
+	int* A = new int[NMAX];
+
+	int* B = new int[NMAX];
+	
+	int* C = new int[NMAX];
+
+	for (int i = 0; i < NMAX; i++) {
+
+		A[i] = (i - 15) % 1000 + 150;
+
+		B[i] = (i + 7) % 1500 - 26;
+
+	}
+
+
+
+	start1 = omp_get_wtime();
+
+	total = semaphore(A, B, C, NMAX);
+
+	end1 = omp_get_wtime();
+
+
+	printf("Сумма элементов матрицы равна %ld\n", total);
+
+	start2 = omp_get_wtime();
+
+	total = barrier(A, B, C, NMAX);
+
+	end2 = omp_get_wtime();
+
+
+	printf("Сумма элементов матрицы равна %ld\n", total);
+
+	start3 = omp_get_wtime();
+
+	total = consistently(A, B, C, NMAX);
+
+	end3 = omp_get_wtime();
+
+	printf("Сумма элементов матрицы равна %ld\n", total);
+
+	printf("Время для семафора: %f\n", end1-start1);
+
+	printf("Время для барьера: %f\n", end2 - start2);
+
+	printf("Время для последовательного вычисления: %f\n", end3 - start3);
+
+	delete[] A;
+	delete[] B;
+	delete[] C;
+
+	return 0;
+
+}
+
+int semaphore(int* a, int* b, int* c,int NMAX) {
+
+	int total = 0;
+
+	int i;
+
+	omp_lock_t lock;
+
+#pragma omp parallel shared(a,b,c,total) private(i)
+
+		omp_init_lock(&lock);
+
+		for (i = 0; i < NMAX; i++)
+
+		{
+
+			if (a[i] > b[i])
+				c[i] = a[i];
+			else
+				c[i] = b[i];
+
+			omp_set_lock(&lock);
+
+			total += c[i];
+
+			omp_unset_lock(&lock);
+
+		}
+
+		omp_destroy_lock(&lock);
+		return total;
+	
+}
+
+int barrier(int* a, int* b, int* c, int NMAX) {
+
+	int total = 0;
+
+	int i;
+
+
+	omp_lock_t lock;
+
+#pragma omp parallel shared(a,b,c,total) private(i)
+
+	for (i = 0; i < NMAX; i++)
+
+	{
+
+
+		if (a[i] > b[i])
+			c[i] = a[i];
+		else
+			c[i] = b[i];
+
+#pragma omp barrier
+
+#pragma omp single
+
+		total += c[i];
+
+	}
+	return total;
+}
+
+int consistently(int* a, int* b, int* c, int NMAX) {
+	int total = 0;
+	int i;
+
+	for (i = 0; i < NMAX; i++)
+
+	{
+		if (a[i] > b[i])
+			c[i] = a[i];
+		else
+			c[i] = b[i];
+		total += c[i];
+	}
+	return total;
+}
