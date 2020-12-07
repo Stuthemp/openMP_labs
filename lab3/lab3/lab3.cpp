@@ -1,4 +1,6 @@
-﻿#include "omp.h"
+﻿#define _CRT_SECURE_NO_WARNINGS
+
+#include "omp.h"
 #include "iostream"
 #include <stdio.h>
 #include <ctime>
@@ -7,155 +9,142 @@
 
 using namespace std;
 
-const int NMAX = 100000000;
+int critical(int* a, int* b, int* c, int NMAX);
+int atom(int* a, int* b, int* c, int NMAX);
+int consistently(int* a, int* b, int* c, int NMAX);
 
-const int MMAX = 10;
+const int NMAX = 10000000;
+
 
 int main()
 
 {
-	setlocale(LC_ALL, "Russian");
+	setlocale(LC_ALL, "russian");
 
-	int i, j;
+	int NMAX;
+
+	printf("Введите: NMAX ");
+
+	scanf("%d", &NMAX);
 
 
-	srand(time(0));
+	double start1, end1;
 
-	//Переменные для расчета времени
-	double start;
-	double end;
+	double start2, end2;
 
-	//Масиив динамичский, потому что иначе будет Stack Overflow
+	double start3, end3;
 
+	long total = 0;
 
 	int* A = new int[NMAX];
-	for (int i = 0; i < NMAX; i++) {
-		A[i] = 1 + rand() % 10;
-	}
 
 	int* B = new int[NMAX];
-	for (int i = 0; i < NMAX; i++) {
-		B[i] = 1 + rand() % 10;
-	}
 
 	int* C = new int[NMAX];
-	int* C2 = new int[NMAX];
 
+	for (int i = 0; i < NMAX; i++) {
 
+		A[i] = (i - 15) % 1000 + 150;
 
-	start = omp_get_wtime();
+		B[i] = (i + 7) % 1500 - 26;
 
-	/*Начало параллельного фрагмента*/
-
-	int total = 0;
-#pragma omp parallel shared(C,B,A,total) 
-	{
-#pragma omp for private(i, j)
-		for (i = 0; i < NMAX; i++)
-		{
-			if (A[i] > B[i])
-				C[i] = A[i];
-			else
-				C[i] = B[i];
-		#pragma omp atomic
-			total += C[i];
-		}
 	}
 
-	/* Завершение параллельного фрагмента */
-
-	end = omp_get_wtime();
 
 
-	printf("Сумма элементов маccива равна %d\n", total);
+	start1 = omp_get_wtime();
 
-	cout << "Время при параллельном использовании atomic " << end - start << endl;
+	total = atom(A, B, C, NMAX);
 
-	start = omp_get_wtime();
-
-	/*Начало параллельного фрагмента*/
-
-	total = 0;
-#pragma omp parallel shared(C,B,A,total) 
-	{
-#pragma omp for private(i, j)
-		for (i = 0; i < NMAX; i++)
-		{
-			if (A[i] > B[i])
-				C[i] = A[i];
-			else
-				C[i] = B[i];
-		#pragma omp critical
-			total += C[i];
-		}
-	}
-
-	/* Завершение параллельного фрагмента */
-
-	end = omp_get_wtime();
+	end1 = omp_get_wtime();
 
 
-
-	printf("Сумма элементов маccива равна %d\n", total);
-
-	cout << "Время при параллельном использовании critical " << end - start << endl;
-
-	start = omp_get_wtime();
-
-	/*Начало параллельного фрагмента*/
-
-	total = 0;
-#pragma omp parallel shared(C,B,A) 
-	{
-#pragma omp for private(i, j) reduction(+:total)
-		for (i = 0; i < NMAX; i++)
-		{
-			if (A[i] > B[i])
-				C[i] = A[i];
-			else
-				C[i] = B[i];
-			total = total + C[i];
-		}
-	}
-
-	/* Завершение параллельного фрагмента */
-
-	end = omp_get_wtime();
-
-
-	printf("Сумма элементов маccива равна %d\n", total);
-
-	cout << "Время при параллельном использовании reduction " << end - start << endl;
-
-	
-	double start2;
-	double end2;
-	int sum = 0;
+	printf("Сумма элементов матрицы равна %ld\n", total);
 
 	start2 = omp_get_wtime();
 
-	for (i = 0; i < NMAX; i++)
-	{
-		if (A[i] > B[i])
-			C2[i] = A[i];
-		else
-			C2[i] = B[i];
-		sum += C2[i];
-	}
+	total = critical(A, B, C, NMAX);
 
 	end2 = omp_get_wtime();
 
 
-	printf("Сумма элементов маccива равна %d\n", sum);
+	printf("Сумма элементов матрицы равна %ld\n", total);
 
-	cout << "Время без параллельного использования вычислительных ресурсов " << end2 - start2 << endl;
-	
+	start3 = omp_get_wtime();
 
-	//cout << endl << sum << endl;
+	total = consistently(A, B, C, NMAX);
 
+	end3 = omp_get_wtime();
 
+	printf("Сумма элементов матрицы равна %ld\n", total);
 
+	printf("Время для atomic: %f\n", end1 - start1);
 
+	printf("Время для critical: %f\n", end2 - start2);
+
+	printf("Время для последовательного вычисления: %f\n", end3 - start3);
+
+	delete[] A;
+	delete[] B;
+	delete[] C;
+
+	return 0;
 
 }
 
+int atom(int* a, int* b, int* c, int NMAX) {
+
+	int total = 0;
+	int i;
+#pragma omp parallel shared(a,b,c,total) 
+	{
+#pragma omp for private(i)
+		for (i = 0; i < NMAX; i++)
+		{
+			if (a[i] > b[i])
+				c[i] = a[i];
+			else
+				c[i] = b[i];
+#pragma omp atomic
+			total += c[i];
+		}
+	}
+
+	return total;
+}
+
+int critical(int* a, int* b, int* c, int NMAX) {
+	int total = 0;
+	int i = 0;
+#pragma omp parallel shared(c,b,a,total) 
+	{
+#pragma omp for private(i)
+		for (i = 0; i < NMAX; i++)
+		{
+			if (a[i] > b[i])
+				c[i] = a[i];
+			else
+				c[i] = b[i];
+#pragma omp critical
+			total += c[i];
+		}
+	}
+
+	return total;
+}
+
+int consistently(int* a, int* b, int* c, int NMAX) {
+	int total = 0;
+	int i;
+
+	for (i = 0; i < NMAX; i++)
+
+	{
+		if (a[i] > b[i])
+			c[i] = a[i];
+		else
+			c[i] = b[i];
+		total += c[i];
+	}
+	return total;
+}
